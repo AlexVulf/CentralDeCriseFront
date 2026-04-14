@@ -1,0 +1,154 @@
+@use "../styles/global" as *;
+
+.gestor-dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 30px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid $color-primary;
+
+    h1 {
+      color: $color-primary;
+      font-size: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .status-geral {
+      padding: 10px 20px;
+      background: $alert-high;
+      color: white;
+      border-radius: 50px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+    }
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+      color: $color-primary;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+  }
+
+  // Bloco de Alertas
+  .action-card {
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+
+      input, textarea, select {
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 1rem;
+      }
+
+      textarea { height: 100px; resize: none; }
+
+      .btn-alert {
+        background-color: $alert-high;
+        color: white;
+        padding: 15px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: transform 0.2s, background 0.2s;
+
+        &:hover { background: darken($alert-high, 10%); }
+        &:active { transform: scale(0.98); }
+      }
+    }
+  }
+
+  // Monitoramento de Abrigos
+  .abrigo-item {
+    margin-bottom: 20px;
+    
+    .info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .progress-container {
+      height: 12px;
+      background: #eee;
+      border-radius: 10px;
+      overflow: hidden;
+
+      .bar {
+        height: 100%;
+        background: $alert-low;
+        transition: width 0.5s ease;
+
+        &.critical { background: $alert-high; }
+        &.warning { background: $alert-medium; }
+      }
+    }
+  }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 2px solid $color-primary;
+    color: $color-primary;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: auto;
+    transition: all 0.2s;
+
+    &:hover {
+      background: $color-primary;
+      color: white;
+    }
+  }
+
+  .stats-info {
+    font-size: 1.1rem;
+    color: #444;
+    margin-bottom: 20px;
+    strong { font-size: 1.5rem; color: $color-primary; }
+  }
+}
