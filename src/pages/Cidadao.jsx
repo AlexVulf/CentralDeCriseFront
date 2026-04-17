@@ -12,31 +12,38 @@ const Cidadao = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Mock de dados para visualização inicial
-        setAbrigos([
-          { id: 1, nome: 'Escola Central', bairro: 'Centro', vagas: 50, ocupadas: 35, endereco: 'Rua das Flores, 123' },
-          { id: 2, nome: 'Ginásio Municipal', bairro: 'Norte', vagas: 100, ocupadas: 90, endereco: 'Av. Brasil, 500' }
+        const [resAbrigos, resAlertas, resDesaparecidos] = await Promise.all([
+          api.get('/abrigos'),
+          api.get('/alertas'),
+          api.get('/desaparecidos')
         ]);
 
-        setAlertas([{ id: 1, mensagem: 'ALERTA CRÍTICO: Risco de alagamento na região Sul. Procure abrigo.', nivel: 'high' }]);
-        
-        setDesaparecidos([
-          { id: 1, nome: 'João Silva', status: 'procurado', foto: 'https://via.placeholder.com/50' },
-          { id: 2, nome: 'Maria Oliveira', status: 'encontrado', foto: 'https://via.placeholder.com/50' }
-        ]);
+        setAbrigos(resAbrigos.data);
+        setAlertas(resAlertas.data);
+        setDesaparecidos(resDesaparecidos.data);
       } catch (error) {
-        console.error("Erro ao buscar dados:", error);
+        console.error("Erro ao buscar dados reais:", error);
       }
     };
 
     fetchData();
   }, []);
 
+  // Filtragem básica local
+  const abrigosFiltrados = abrigos.filter(a => 
+    a.bairro?.toLowerCase().includes(busca.toLowerCase()) || 
+    a.nome?.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const pessoasFiltradas = desaparecidos.filter(p => 
+    p.nome?.toLowerCase().includes(buscaPessoa.toLowerCase())
+  );
+
   return (
     <div className="cidadao-page">
       {/* 1. Header de Alerta */}
-      {alertas.map(alerta => (
-        <div key={alerta.id} className="alerta-banner">
+      {alertas.length > 0 && alertas.map(alerta => (
+        <div key={alerta.id} className={`alerta-banner ${alerta.nivel}`}>
           ⚠️ {alerta.mensagem}
         </div>
       ))}
@@ -68,24 +75,23 @@ const Cidadao = () => {
         {/* 3. Módulo de Abrigos */}
         <section className="card">
           <h3>🏘️ Abrigos de Referência</h3>
-          {abrigos.map(abrigo => (
+          {abrigosFiltrados.length > 0 ? abrigosFiltrados.map(abrigo => (
             <div key={abrigo.id} className="item-lista-container" style={{ marginBottom: '15px' }}>
               <div className="item-lista">
                 <div>
                   <strong>{abrigo.nome}</strong>
-                  <p><small>{abrigo.endereco}</small></p>
+                  <p><small>{abrigo.endereco} - {abrigo.bairro}</small></p>
                 </div>
                 <span>{abrigo.vagas - abrigo.ocupadas} vagas</span>
               </div>
               <div className="progress-bar">
                 <div 
-                  className="fill" 
+                  className={`fill ${ (abrigo.ocupadas/abrigo.vagas) > 0.9 ? 'critical' : '' }`}
                   style={{ width: `${(abrigo.ocupadas / abrigo.vagas) * 100}%` }}
                 ></div>
               </div>
             </div>
-          ))}
-          <button className="btn-acao">Ver rota no Mapa</button>
+          )) : <p>Nenhum abrigo encontrado nesta região.</p>}
         </section>
 
         {/* 4. Módulo de Doações */}
@@ -106,17 +112,16 @@ const Cidadao = () => {
         <section className="card">
           <h3>🔍 Desaparecidos</h3>
           <div className="galeria-mini">
-            {desaparecidos.map(pessoa => (
+            {pessoasFiltradas.length > 0 ? pessoasFiltradas.map(pessoa => (
               <div key={pessoa.id} className="item-lista">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img src={pessoa.foto} alt={pessoa.nome} style={{ borderRadius: '50%' }} />
+                  <img src={pessoa.foto || 'https://via.placeholder.com/50'} alt={pessoa.nome} style={{ borderRadius: '50%', width: '40px' }} />
                   <span>{pessoa.nome}</span>
                 </div>
                 <span className={`status-tag ${pessoa.status}`}>{pessoa.status}</span>
               </div>
-            ))}
+            )) : <p>Nenhuma pessoa encontrada.</p>}
           </div>
-          <button className="btn-acao">Tenho informações</button>
         </section>
 
         {/* 6. Módulo de Voluntariado */}

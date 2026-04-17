@@ -1,119 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import './Abrigo.scss';
 
 const Abrigo = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  
-  // Estado completo com Abrigados, Voluntários e Recursos
-  const [dadosAbrigo, setDadosAbrigo] = useState({
-    nome: "Escola Central",
-    vagasTotais: 100,
-    ocupadas: 85,
-    recursos: [
-      { id: 1, item: "Água Mineral", qtd: "500L", status: "estavel" },
-      { id: 2, item: "Colchões", qtd: "5", status: "faltando" },
-      { id: 3, item: "Arroz", qtd: "200kg", status: "excesso" },
-    ],
-    abrigados: [
-      { id: 1, nome: "Carlos Alberto", idade: 45, contato: "(11) 98888-0001" },
-      { id: 2, nome: "Lucia Santos", idade: 32, contato: "(11) 97777-0002" },
-    ],
-    voluntarios: [
-      { id: 1, nome: "Marcos Oliveira", funcao: "Cozinha", turno: "Manhã" },
-      { id: 2, nome: "Ana Paula", funcao: "Saúde", turno: "Tarde" },
-      { id: 3, nome: "Ricardo Alves", funcao: "Limpeza", turno: "Noite" },
-    ],
-    intercambio: [
-      { id: 101, abrigo: "Ginásio Norte", precisa: "Arroz", qtd: "30kg" },
-      { id: 102, abrigo: "Igreja Matriz", precisa: "Água", qtd: "100L" },
-    ]
-  });
+  const [abrigo, setAbrigo] = useState(null);
+  const [vagasEdit, setVagasEdit] = useState(0);
 
   useEffect(() => {
-    setTimeout(() => setLoading(false), 500);
-  }, []);
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    // Verificação de segurança: Se for gestor de abrigo, só acessa o dele.
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
-  if (loading) return <div className="container">Carregando Dashboard...</div>;
+    if (user.tipo === 'abrigo' && user.abrigo_id != id) {
+      alert("Você não tem permissão para gerenciar este abrigo.");
+      navigate(`/abrigo/${user.abrigo_id}`);
+      return;
+    }
+
+    fetchAbrigo();
+  }, [id]);
+
+  const fetchAbrigo = async () => {
+    try {
+      const response = await api.get(`/abrigos/${id}`);
+      setAbrigo(response.data);
+      setVagasEdit(response.data.ocupadas);
+      setLoading(false);
+    } catch (error) {
+      console.error("Erro ao buscar abrigo:", error);
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateVagas = async () => {
+    try {
+      await api.put(`/abrigos/${id}`, { ocupadas: vagasEdit });
+      alert("Vagas atualizadas!");
+      fetchAbrigo();
+    } catch (error) {
+      alert("Erro ao atualizar vagas.");
+    }
+  };
+
+  if (loading) return <div className="container">Carregando Dashboard do Abrigo...</div>;
+  if (!abrigo) return <div className="container">Abrigo não encontrado.</div>;
 
   return (
     <div className="abrigo-dashboard">
+      <header className="admin-header-small">
+        <h1>🏠 Gestão: {abrigo.nome}</h1>
+        <button className="btn-table" onClick={() => navigate('/login')}>Sair</button>
+      </header>
+
       {/* 1. Resumo de Ocupação */}
       <header className="header-summary">
         <div className="status-card">
           <span>Capacidade Total</span>
-          <strong>{dadosAbrigo.vagasTotais}</strong>
+          <strong>{abrigo.vagas}</strong>
         </div>
-        <div className={`status-card ${dadosAbrigo.ocupadas > 90 ? 'critical' : 'warning'}`}>
+        <div className={`status-card ${ (abrigo.ocupadas / abrigo.vagas) > 0.9 ? 'critical' : 'warning'}`}>
           <span>Pessoas Abrigadas</span>
-          <strong>{dadosAbrigo.ocupadas}</strong>
+          <strong>{abrigo.ocupadas}</strong>
         </div>
         <div className="status-card">
           <span>Vagas Disponíveis</span>
-          <strong>{dadosAbrigo.vagasTotais - dadosAbrigo.ocupadas}</strong>
+          <strong>{abrigo.vagas - abrigo.ocupadas}</strong>
         </div>
         <div className="status-card">
-          <span>Voluntários Ativos</span>
-          <strong>{dadosAbrigo.voluntarios.length}</strong>
+          <span>Ocupação</span>
+          <strong>{Math.round((abrigo.ocupadas / abrigo.vagas) * 100)}%</strong>
         </div>
       </header>
 
       <div className="main-content">
         <div className="left-column">
-          {/* 2. Gestão de Abrigados */}
+          {/* 2. Controle de Vagas */}
           <section className="section-card">
-            <h3>👥 Gestão de Abrigados</h3>
-            <button className="btn-checkin">+ Registrar Novo Check-in</button>
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Idade</th>
-                  <th>Contato</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dadosAbrigo.abrigados.map(pessoa => (
-                  <tr key={pessoa.id}>
-                    <td>{pessoa.nome}</td>
-                    <td>{pessoa.idade} anos</td>
-                    <td>{pessoa.contato}</td>
-                    <td><button className="btn-table">Detalhes</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <h3>📊 Atualizar Ocupação em Tempo Real</h3>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginTop: '10px' }}>
+              <input 
+                type="number" 
+                value={vagasEdit}
+                onChange={(e) => setVagasEdit(e.target.value)}
+                style={{ padding: '10px', width: '100px', borderRadius: '5px', border: '1px solid #ddd' }}
+              />
+              <button className="btn-checkin" style={{ marginBottom: 0 }} onClick={handleUpdateVagas}>
+                Confirmar Nova Ocupação
+              </button>
+            </div>
+            <p style={{ marginTop: '15px', fontSize: '0.85rem', color: '#666' }}>
+              * Utilize este campo para atualizar o número total de pessoas atualmente no abrigo.
+            </p>
           </section>
 
-          {/* 3. Gestão de Voluntários */}
-          <section className="section-card" style={{ marginTop: '30px' }}>
-            <h3>🤝 Gestão de Voluntários</h3>
-            <button className="btn-checkin" style={{ backgroundColor: '#27ae60' }}>+ Cadastrar Voluntário</button>
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Função</th>
-                  <th>Turno</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dadosAbrigo.voluntarios.map(vol => (
-                  <tr key={vol.id}>
-                    <td>{vol.nome}</td>
-                    <td><span className="tag estavel" style={{ backgroundColor: '#e8f8f5', color: '#16a085' }}>{vol.funcao}</span></td>
-                    <td>{vol.turno}</td>
-                    <td><button className="btn-table">Remanejar</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          {/* 4. Inventário de Recursos */}
+          {/* 3. Recursos (Simulado por enquanto) */}
           <section className="section-card" style={{ marginTop: '30px' }}>
             <h3>📦 Inventário de Recursos</h3>
             <table>
@@ -126,43 +114,36 @@ const Abrigo = () => {
                 </tr>
               </thead>
               <tbody>
-                {dadosAbrigo.recursos.map(item => (
-                  <tr key={item.id}>
-                    <td>{item.item}</td>
-                    <td>{item.qtd}</td>
-                    <td><span className={`tag ${item.status}`}>{item.status}</span></td>
-                    <td><button className="btn-table">Atualizar</button></td>
-                  </tr>
-                ))}
+                <tr>
+                  <td>Água Mineral</td>
+                  <td>500L</td>
+                  <td><span className="tag estavel">Estável</span></td>
+                  <td><button className="btn-table">Atualizar</button></td>
+                </tr>
+                <tr>
+                  <td>Colchões</td>
+                  <td>5</td>
+                  <td><span className="tag faltando">Faltando</span></td>
+                  <td><button className="btn-table">Pedir ajuda</button></td>
+                </tr>
               </tbody>
             </table>
           </section>
         </div>
 
         <aside className="right-column">
-          {/* 5. Central de Intercâmbio */}
           <section className="section-card">
-            <h3>🔄 Central de Intercâmbio</h3>
-            <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
-              Necessidades de outros abrigos próximos:
-            </p>
-            {dadosAbrigo.intercambio.map(req => (
-              <div key={req.id} className="intercambio-item">
-                <div className="info">
-                  <span><strong>{req.precisa}</strong> ({req.qtd})</span>
-                  <small>{req.abrigo}</small>
-                </div>
-                <button>Enviar Recurso</button>
-              </div>
-            ))}
+            <h3>📍 Localização</h3>
+            <p><strong>Bairro:</strong> {abrigo.bairro}</p>
+            <p><strong>Endereço:</strong> {abrigo.endereco}</p>
+            <button className="btn-secondary" style={{ marginTop: '20px', width: '100%' }}>Ver no Mapa</button>
           </section>
 
-          {/* 6. Alertas de Logística */}
           <section className="section-card" style={{ marginTop: '20px', backgroundColor: '#fff5f5' }}>
-            <h3 style={{ color: '#c0392b' }}>⚠️ Alertas Urgentes</h3>
-            <ul style={{ fontSize: '0.9rem', paddingLeft: '15px' }}>
-              <li>Estoque de Colchões crítico (menos de 10%).</li>
-              <li>Escala de limpeza da noite sem voluntário.</li>
+            <h3 style={{ color: '#c0392b' }}>⚠️ Alertas da Unidade</h3>
+            <ul style={{ fontSize: '0.9rem', paddingLeft: '15px', color: '#c0392b' }}>
+              { (abrigo.ocupadas / abrigo.vagas) > 0.9 && <li><strong>Capacidade quase esgotada!</strong></li> }
+              <li>Solicitar reposição de kits de higiene.</li>
             </ul>
           </section>
         </aside>
